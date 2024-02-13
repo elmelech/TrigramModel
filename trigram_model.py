@@ -10,9 +10,9 @@ import random
 import os
 import os.path
 """
-COMS W4705 - Natural Language Processing - Fall 2023 
+COMS W4705 - Natural Language Processing - Spring 2023 
 Programming Homework 1 - Trigram Language Models
-Daniel Bauer
+Instructor: Prof. Daniel Bauer
 """
 
 def corpus_reader(corpusfile, lexicon=None): 
@@ -42,7 +42,7 @@ def get_ngrams(sequence, n):
     if n <= 0:
         raise ValueError("Invalid value of n")
     
-    elif n ==1:
+    elif n == 1:
         padded_sequence = ['START'] + sequence + ['STOP']
 
     # Pad the sequence with 'START' and 'STOP' tokens
@@ -115,12 +115,16 @@ class TrigramModel(object):
         COMPLETE THIS METHOD (PART 3)
         Returns the raw (unsmoothed) trigram probability
         """
-        # EDGE CASE 1: if first two words are START START
-        if trigram[:2] == ('START', 'START',):
+        # EDGE CASE 1: if first word(s) is/are START
+        if trigram[:2] == ('START', 'START',) or trigram[:1] == ('START',):
             return self.raw_bigram_probability(trigram[1:])
         
         # EDGE CASE 2: if trigram not in dictionary
         elif trigram not in self.trigramcounts:
+            return 1 / self.total_word_count
+        
+        # EDGE CASE 3: if denominator is 0
+        elif self.bigramcounts[trigram[:2]] == 0:
             return 1 / self.total_word_count
 
         return self.trigramcounts[trigram] / self.bigramcounts[trigram[:2]]
@@ -137,8 +141,12 @@ class TrigramModel(object):
         # EDGE CASE 2: if bigram not in dictionary
         elif bigram not in self.bigramcounts:
             return 1 / self.total_word_count
+        
+        # EDGE CASE 3: if denominator is 0
+        elif self.unigramcounts[bigram[:1]] == 0:
+            return 1 / self.total_word_count
 
-        return self.bigramcounts[bigram] / self.unigramcounts[bigram[1:]]
+        return self.bigramcounts[bigram] / self.unigramcounts[bigram[:1]]
         
     def raw_unigram_probability(self, unigram):
         """
@@ -185,7 +193,8 @@ class TrigramModel(object):
         sum_of_logs = 0
         for sentence in corpus:
             sum_of_logs += self.sentence_logprob(sentence)
-            M += len(sentence) + 1 # +1 for the STOP token
+            # +1 for the STOP token
+            M += len(sentence) + 1
         return 2 ** -(sum_of_logs / M)
 
 def essay_scoring_experiment(training_file1, training_file2, testdir1, testdir2):
@@ -226,16 +235,16 @@ if __name__ == "__main__":
     # Python prompt. 
 
     # Testing perplexity: 
-    print("Testing perplexity: ")
-    dev_corpus = corpus_reader(sys.argv[2], model.lexicon)
-    pp = model.perplexity(dev_corpus)
-    print(pp)
+    # print("Testing perplexity: ")
+    # dev_corpus = corpus_reader(sys.argv[2], model.lexicon)
+    # pp = model.perplexity(dev_corpus)
+    # print(pp)
 
 
     # Essay scoring experiment: 
-    print("Essay scoring experiment: ")
-    acc = essay_scoring_experiment("hw1_data/ets_toefl_data/train_high.txt", "hw1_data/ets_toefl_data/train_low.txt", "hw1_data/ets_toefl_data/test_high", "hw1_data/ets_toefl_data/test_low")
-    print("{:.2f}".format(acc * 100) , "%")
+    # print("Essay scoring experiment: ")
+    # acc = essay_scoring_experiment("hw1_data/ets_toefl_data/train_high.txt", "hw1_data/ets_toefl_data/train_low.txt", "hw1_data/ets_toefl_data/test_high", "hw1_data/ets_toefl_data/test_low")
+    # print("{:.2f}".format(acc * 100) , "%")
 
     # print(get_ngrams(["natural","language","processing"],3)) # Part 1
     # print(model.trigramcounts[('START','START','the')]) # Part 2
@@ -250,4 +259,3 @@ if __name__ == "__main__":
     # print("Smoothed Trigram Probability for ('START','START','the'): ") # Part 4
     # print("{:.15f}".format(float(model.smoothed_trigram_probability(('START','START','the'))))) # Part 4
     # print(model.sentence_logprob(["natural","language","processing"])) # Part 5
-    # print(model.sentence_logprob(["roey","elmelech"])) # Part 5
